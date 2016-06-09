@@ -9,22 +9,23 @@ public class PlayerAttack : AbstractBehavior {
     public Collider2D attackTrigger;
     public PlayerHealth dead;
     private Animator anim;
+    private PlayerSpecial playerspecial;
 
     protected override void Awake() {
         anim = GetComponent<Animator>();
         attackTrigger.enabled = false;
         dead = GetComponent<PlayerHealth>();
-        
+        playerspecial = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerSpecial>();
 
     }
 
     void Update() {
             var canAttack = Input.GetKeyDown("z"); //inputState.GetButtonValue(inputButtons[0]);
-
-            if (canAttack && !attacking) {
+        var loadingSpecial = playerspecial.loadingSpecial();
+            if (canAttack && !attacking && !loadingSpecial) {
                 attacking = true;
                 attackTimer = attackCD;
-
+                
                 attackTrigger.enabled = true;
 
             }

@@ -20,14 +20,17 @@ public class PlayerSpecial : AbstractBehavior {
     public bool casting;
 
     private bool isShooting;
-    public float shootDelay = .5f;
     public float RangePwrCap = 0.7f;
     public float RangePwr = 0f;
-    private float timeElapsed = 0f;
+    public float shootDelay = .5f;
+    public float healingDelay = .5f;
+    public float punchDelay = .5f;
 
+    private float timeElapsed = 0f;
     public bool attacking = false;
     private float attackTimer = 0;
     private float attackCD = 2f;
+
     public Collider2D SpecialMelee;
 
     
@@ -35,72 +38,93 @@ public class PlayerSpecial : AbstractBehavior {
     override protected void Awake() {
         player = GameObject.FindGameObjectWithTag("Player");
         heal = player.GetComponent<PlayerHealth>();
+        this.inputState = new InputState();
     }
 
 
     protected virtual void Shoot(bool value) {
-        shooting = value;
-        //ToggleScripts(!value);
 
-        if (projectilePrefab != null) {
+        if (value)
+        {
+            if (projectilePrefab != null)
+            {
 
-            var canFire = inputState.GetButtonValue(inputButtons[0]);
-
-            if (isShooting == false) {
-                timeElapsed = 0;
-            }
-            else {
-                RangePwr = timeElapsed / RangePwrCap;
-                    if (RangePwr > 1) {
+                if (isShooting)
+                {
+                    RangePwr = timeElapsed / RangePwrCap;
+                    if (RangePwr > 1)
+                    {
                         RangePwr = 1;
                     }
+                }
+
+                if (!shooting)
+                {
+                    shooting = true;
+                    isShooting = true;
+
+                }
+                //if (canFire && timeElapsed > shootDelay) {                        
+                //        CreateProjectile(CalculateFirePosition());
+                //        timeElapsed = 0;
+                //        shooting = true;
+                //        ToggleScripts(false);
+                //    }
+                //    else {
+                //    shooting = false;
+                //    ToggleScripts(true);
+                //}
             }
-            
-            if (canFire) {
-                isShooting = true;                
-            }else if(isShooting == true) {
+        }
+        else
+        {
+            if (timeElapsed > shootDelay)
+            {
                 CreateProjectile(CalculateFirePosition());
                 isShooting = false;
+                shooting = false;
             }
-            //if (canFire && timeElapsed > shootDelay) {                        
-            //        CreateProjectile(CalculateFirePosition());
-            //        timeElapsed = 0;
-            //        shooting = true;
-            //        ToggleScripts(false);
-            //    }
-            //    else {
-            //    shooting = false;
-            //    ToggleScripts(true);
-            //}
-            timeElapsed += Time.deltaTime;
-          }
+
+           
+        }
+        //ToggleScripts(!value);
+
     }
     protected virtual void Heal(bool value) {
         //var canHeal = inputState.GetButtonValue(inputButtons[0]);
-
         //if (canHeal) {
-        //    //heal.curHealth += 20;
+        if (value)
+        {
+            healing = true;
+        }
+        else
+        {
+            if (timeElapsed > healingDelay)
+            {
+                heal.curHealth += 20;
+                healing = false;
+            }
+        }
+
+        
         //}
     }
     protected virtual void Punch(bool value) {
 
-        punching = value;
-        SpecialMelee.enabled = value;
 
-        var canAttack = inputState.GetButtonValue(inputButtons[0]);
-        if (canAttack && !attacking) {
-            attacking = true;
+        if (value)
+        {
+            punching = true;
             attackTimer = attackCD;
+            SpecialMelee.enabled = true;
+
         }
-
-        if (attacking) {
-            if (attackTimer > 0) {
-                attackTimer -= Time.deltaTime;
-                ToggleScripts(false);
-
-            }
-            else {
-                attacking = false;
+        else
+        {
+            if (timeElapsed > punchDelay)
+            {
+                SpecialMelee.enabled = false;
+                punching = false;
                 ToggleScripts(true);
             }
         }
@@ -110,11 +134,21 @@ public class PlayerSpecial : AbstractBehavior {
     //}
 
     void Update () {
+        if(shooting || punching || healing)
+        {
+        timeElapsed += Time.deltaTime;
+        }
+        else
+        {
+            timeElapsed = 0;
+        }
+
         
         switch (specialSelect) {
             case 1: //ranged
-
-                var canShoot = inputState.GetButtonValue(inputButtons[0]);
+                var canShoot = Input.GetButtonDown("Fire1");
+                //vet inte varför men getbuttonvalue funkar inte riktigt
+                //var canShoot = inputState.GetButtonValue(inputButtons[0]);
                 if (canShoot && !shooting) {
                      Shoot(true);
                 }
@@ -125,23 +159,30 @@ public class PlayerSpecial : AbstractBehavior {
                 break;
                 
             case 2: //heal  
-                //var canHeal = inputState.GetButtonValue(inputButtons[0]);
-                //if (canHeal && !healing) {
-                //    Heal(true);
-                //}
-                //else if (healing && !canHeal) {
-                //    Heal(false);
-                //}
+
+                var canHeal = Input.GetButtonDown("Fire1");
+
+                if (canHeal && !healing) {
+                    Heal(true);
+                    canHeal = false;
+                }
+                else if (healing && !canHeal) {
+                    Heal(false);
+                }
 
                 break;
             case 3: //punch
-                var canPunch = inputState.GetButtonValue(inputButtons[0]);
-                if (canPunch && !punching) {
+
+                var canPunch = Input.GetButtonDown("Fire1");
+          
+
+                if (canPunch && !punching ) {
                     Punch(true);
                 }
                 else if (punching && !canPunch) {
                     Punch(false);
                 }
+                
 
                 break;
             case 4: //spell
@@ -185,6 +226,10 @@ public class PlayerSpecial : AbstractBehavior {
         pos.y += transform.position.y;
 
         Gizmos.DrawWireSphere(pos, debugRadius);
+    }
+    public Boolean loadingSpecial()
+    {
+        return punching || healing || shooting || casting;
     }
     
 }
